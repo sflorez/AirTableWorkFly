@@ -2,14 +2,16 @@ import traceback
 import requests
 import csv
 import json
-from pyairtable import Table
+import airTableApi
 from pprint import pprint
 
 def keyRemapping(x):
     return {"quote_id" if k == 'id' else k:v for k,v in x.items()}   
     
-api_key = "keyCLQeVtRKMNN6m4"
-table = Table(api_key, 'apphXonxcXMIfE8qm', 'Quotes 2/2')
+tableId = 'apphXonxcXMIfE8qm'
+tableName = 'Quotes 2/2'
+
+table = airTableApi.getTable(tableId=tableId, tableName=tableName)
 
 quotesData = []
 with open('allQuotes.csv') as csvfile:
