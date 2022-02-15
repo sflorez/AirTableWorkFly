@@ -6,7 +6,7 @@ import airTableApi
 from pprint import pprint
 
 def keyRemapping(x):
-    return {"quote_id" if k == 'id' else k:v for k,v in x.items()}   
+    return {"quote_id" if k == 'id' else k:v for k,v in x.items()}  
     
 tableId = 'apphXonxcXMIfE8qm'
 tableName = 'Quotes 2/2'
