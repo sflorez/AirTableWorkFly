@@ -11,7 +11,7 @@ def keyRemapping(x):
 tableId = 'appamPDLTB6vyeNDB'
 tableName = 'Airports'
 
-tableInstance  = airTableApi.getTable(tableId=tableId, tableName=tableName)
+tableInstance  = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 airportData = []
 with open('allAirports.csv') as csvfile:

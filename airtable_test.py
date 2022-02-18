@@ -11,7 +11,7 @@ def keyRemapping(x):
 tableId = 'apphXonxcXMIfE8qm'
 tableName = 'Quotes 2/2'
 
-table = airTableApi.getTable(tableId=tableId, tableName=tableName)
+table = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 quotesData = []
 with open('allQuotes.csv') as csvfile:

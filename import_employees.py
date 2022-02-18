@@ -11,7 +11,7 @@ def keyRemapping(x):
 tableId = 'apppywY8da44n71Ee'
 tableName = 'Employees'
 
-tableInstance = airTableApi.getTable(tableId=tableId, tableName=tableName)
+tableInstance = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 employeeData = []
 with open('allemployees.csv') as csvfile:

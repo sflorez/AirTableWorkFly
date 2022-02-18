@@ -13,7 +13,7 @@ types_of_encoding = ["utf8"]
 tableId = 'appamPDLTB6vyeNDB'
 tableName = 'FBOs'
 
-tableInstance = airTableApi.getTable(tableId=tableId, tableName=tableName)
+tableInstance = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 fboData = []
 
