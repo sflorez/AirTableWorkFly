@@ -26,4 +26,7 @@ def linkTo(linkFromTable, linkToTable, chunkSize, referencefield, comparisonfiel
         pprint(recordsToUpdate)
         linkFromTable.batch_update(recordsToUpdate)
 
+def linkToMultiple():
+    return None
+
 
