@@ -1,0 +1,55 @@
+with report as (
+	select *, count(*) over (partition by contact_id) as contact_count from customer_contact
+	),
+ca as (
+	select contact_id, avianis_id, customer_id from report 
+	where contact_count > 1 
+	group by contact_id, avianis_id, customer_id
+	
+--	where contact_count > 1
+--	where avianis_id is not null
+	)
+	
+	select * from ca
+	
+-- select ca.contact_id as contact_primary_id,
+-- 	   ca.avianis_id,
+-- 	   ca.customer_id as contact_customer_id,
+-- 	   co.created_at,
+-- 	   co.home_airport_id,
+-- 	   av.id as avianis_primary_id,
+-- 	   av.customer_id as avianis_customer_id,
+-- 	   av.first_name,
+-- 	   av.middle_name,
+-- 	   av.last_name,
+-- 	   av.id_information_id,
+-- 	   av.primary_address_id,
+-- 	   av.is_scheduling_contact,
+-- 	   av.position,
+-- 	   cem.email as email,
+-- 	   cpn.phone_number as phone,
+-- 	   idinf.passport_name,
+-- 	   idinf.passport_number,
+-- 	   idinf.passport_issue_date,
+-- 	   idinf.passport_expiration_date,
+-- 	   idinf.passport_country_id as passport_country,
+-- 	   idinf.passport_gender_id as passport_gender_id,
+-- 	   idinf.drivers_license_number,
+-- 	   idinf.drivers_license_country_id as drivers_license_country,
+-- 	   idinf.drivers_license_expiration_date,
+-- 	   idinf.drivers_license_state_id as drivers_license_state,
+-- 	   idinf.weight,
+-- 	   idinf.dob as date_of_birth,
+-- 	   idinf.birth_city,
+-- 	   idinf.birth_state_id as birth_state,
+-- 	   idinf.birth_country_id as birth_country,
+-- 	   co.extras
+-- from ca
+-- left join contact as co on ca.contact_id = co.id
+-- left join avianis_contact as av on ca.avianis_id = av.avianis_id
+-- left join contact_email_address as cem on ca.contact_id = cem.contact_id
+-- left join contact_phone_number as cpn on ca.contact_id = cpn.contact_id
+-- left join id_information as idinf on av.id_information_id = idinf.id
+
+--cem.is_primary as is_contact_primary_email,
+--cem.type_id as contact_email_type,

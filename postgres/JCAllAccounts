@@ -1,0 +1,23 @@
+-- select * from customer where updated_at >= now() -  interval '3 months' 
+
+select c.id as jet_club_customer_id,
+		c.updated_at,
+		c.account_name,
+		c.intacct_id,
+		c.sales_rep_id as sales_rep_ps,
+		case when ct.type = 'jet_club' then 'fly exclusive jet club' end as account_type,
+		et.entity as entity_type,
+		ac.id as av_customer_id,
+		ac.avianis_id,
+		ac.email,
+		ac.work_phone,
+		ac.primary_address_id
+from customer as c
+left join avianis_customer as ac on c.account_name = ac.account_name
+join customer_type as ct on ct.id = c.customer_type_id
+join entity_type as et on et.id = c.entity_type_id
+
+
+-- and customer_type_id = 4
+
+-- select * from customer where id = '3c9e8878-0068-11ec-991b-16a398308e81'

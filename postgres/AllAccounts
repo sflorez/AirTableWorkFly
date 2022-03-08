@@ -1,0 +1,38 @@
+ SELECT
+        CASE
+            WHEN avianis_customer.account_name IS NOT NULL THEN avianis_customer.account_name
+            ELSE customer.account_name
+        END AS account_name,
+        CASE
+            WHEN customer.id IS NOT NULL THEN customer.id
+            ELSE avianis_customer.id
+        END AS primary_id,
+    avianis_customer.avianis_id,
+    customer.id AS jet_club_customer_id,
+    avianis_customer.id AS av_customer_id,
+        CASE
+            WHEN avianis_customer.account_type_id IS NOT NULL THEN avianis_account_type.name
+            ELSE
+            CASE
+                WHEN customer_type.type = 'jet_club'::text THEN 'fly exclusive jet club'::text
+                ELSE NULL::text
+            END
+        END AS account_type,
+    avianis_customer.primary_address_id,
+    avianis_customer.fax,
+    avianis_customer.work_phone,
+    avianis_customer.email,
+    customer.sales_rep_id AS sales_rep_ps,
+    customer.intacct_id,
+    entity_type.entity AS entity_type,
+        CASE
+            WHEN avianis_customer.updated_at IS NULL THEN customer.updated_at
+            WHEN customer.updated_at IS NULL THEN avianis_customer.updated_at
+            WHEN avianis_customer.updated_at > customer.updated_at THEN avianis_customer.updated_at
+            ELSE customer.updated_at
+        END AS updated_at
+   FROM avianis_customer
+     FULL JOIN customer ON customer.avianis_account_id = avianis_customer.avianis_id
+     LEFT JOIN avianis_account_type ON avianis_customer.account_type_id = avianis_account_type.id
+     LEFT JOIN customer_type ON customer.customer_type_id = customer_type.id
+     LEFT JOIN entity_type ON customer.entity_type_id = entity_type.id;

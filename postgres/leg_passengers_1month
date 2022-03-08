@@ -1,0 +1,5 @@
+SELECT * FROM avianis_contact_trip_leg
+JOIN avianis_trip_leg ON avianis_trip_leg.id = avianis_contact_trip_leg.trip_leg_id
+JOIN avianis_contact ON avianis_contact.id = avianis_contact_trip_leg.contact_id
+where created_at >= now() - interval '1 MONTH'
+

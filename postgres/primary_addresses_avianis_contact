@@ -1,0 +1,5 @@
+select primary_address_id from avianis_contact
+left join address on address.id = avianis_contact.primary_address_id
+where primary_address_id is not null
+limit 100;
+-- where primary_address_id is not null

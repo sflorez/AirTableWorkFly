@@ -1,0 +1,2 @@
+select address_id, fbo.id from fbo
+where address_id is not null
