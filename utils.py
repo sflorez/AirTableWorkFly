@@ -8,7 +8,7 @@ Bases = {'Sales' : 'apphXonxcXMIfE8qm',
          'Static' : 'appamPDLTB6vyeNDB',
          }
 
-TestBases = {'CRM': 'app42pZLWwify8rd5'}
+TestBases = {'CRM': 'appqVB2CntdQaBWmE'}
 
 def getCSVData(filepath, withCodec, delimiter):
     data = []
