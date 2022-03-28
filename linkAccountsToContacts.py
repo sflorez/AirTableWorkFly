@@ -3,7 +3,7 @@ from utils import Bases, TestBases
 from utils import getCSVData
 from pprint import pprint
 
-base = TestBases.get('CRM')
+base = Bases.get('CRM')
 accountsTable = airTableApi.getTable(baseId=base, tableName='All Accounts')
 contactsTable = airTableApi.getTable(baseId=base, tableName='Contacts')
 
@@ -11,13 +11,14 @@ roles = {1 : 'primary',
          2 : 'authorizer',
          3 : 'passenger'}
 
-linkData = getCSVData(filepath='customer_contact.csv', withCodec=None, delimiter=',')
+linkData = getCSVData(filepath='customer_contact.csv', withCodec='utf-8-sig', delimiter=',')
 
 # pprint(linkData)
 
 jetClubAccounts = accountsTable.all(view='Jet Club Accounts')
 allContacts = contactsTable.all()
 recordsToUpdate = []
+badRecords = []
 
 def getContactRecord(contactId):
     contactRecord = [el for el in allContacts if el['fields'].get('primary_id') == contactId]
@@ -42,7 +43,18 @@ for account in jetClubAccounts:
         possibleLink = getContactRecord(primary[0])
         if possibleLink:
             primaryToLink.append(possibleLink.get('id'))
-            recordToUpdate['primary'] = primaryToLink
+            recordToUpdate['Primary'] = primaryToLink
+            contacts.append(primary[0])
+    if authorizers:
+        #lookup auth bois
+        print('auth stuff')
+        for authorizer in authorizers:
+            possibleLink = getContactRecord(authorizer)
+            if possibleLink:
+                contacts.append(authorizer)
+                authorizersToLink.append(possibleLink.get('id'))
+        dedupe = set(authorizersToLink)
+        recordToUpdate['Authorizers'] = list(dedupe)
     if contacts:
         #lookup contacts infos
         print('contact stuff')
@@ -52,19 +64,13 @@ for account in jetClubAccounts:
                 contactsToLink.append(possibleLink.get('id'))
         dedupe = set(contactsToLink)
         recordToUpdate['contacts'] = list(dedupe)
-    if authorizers:
-        #lookup auth bois
-        print('auth stuff')
-        for authorizer in authorizers:
-            possibleLink = getContactRecord(authorizer)
-            if possibleLink:
-                authorizersToLink.append(possibleLink.get('id'))
-        dedupe = set(authorizersToLink)
-        recordToUpdate['Authorizers'] = list(dedupe)
     if recordToUpdate:
         recordsToUpdate.append({'id': account.get('id'), 'fields': recordToUpdate})
+    else:
+        badRecords.append(account)
     #add to the update record
 pprint(len(recordsToUpdate))
+pprint(badRecords)
 accountsTable.batch_update(recordsToUpdate)
 #update all jc accounts
 
