@@ -70,7 +70,6 @@ for account in jetClubAccounts:
         badRecords.append(account)
     #add to the update record
 pprint(len(recordsToUpdate))
-pprint(badRecords)
 accountsTable.batch_update(recordsToUpdate)
 #update all jc accounts
 
