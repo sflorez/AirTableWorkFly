@@ -2,3 +2,6 @@ __pycache__/
 CSVs/
 postgres/
 .venv/
+
+.DS_store
+airTableApi.pyc
