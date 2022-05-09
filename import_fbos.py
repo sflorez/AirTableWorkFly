@@ -18,7 +18,7 @@ tableInstance = airTableApi.getTable(baseId=tableId, tableName=tableName)
 fboData = []
 
 for encoding_type in types_of_encoding:
-    with codecs.open('allfbos.csv', encoding= encoding_type, errors='replace') as csvfile:
+    with codecs.open('CSVs/allfbos.csv', encoding= encoding_type, errors='replace') as csvfile:
         fbos = csv.DictReader(csvfile, delimiter=',')
         for row in fbos:
             fboData.append(row)

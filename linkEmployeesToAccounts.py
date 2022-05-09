@@ -14,7 +14,7 @@ flyEmployeeTable = airTableApi.getTable(baseId=baseId, tableName=flyEmployeesTab
 # update Accounts table with sales_rep_id from postgres
 
 salesRepData = []
-with open('allSalesRepIds.csv') as csvfile:
+with open('CSVs/allSalesRepIds.csv') as csvfile:
     salesRep = csv.DictReader(csvfile, delimiter=',')
     for row in salesRep:
         salesRepData.append(row)

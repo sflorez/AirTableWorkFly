@@ -14,7 +14,7 @@ tableName = 'Employees'
 tableInstance = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 employeeData = []
-with open('allemployees.csv') as csvfile:
+with open('CSVs/allemployees.csv') as csvfile:
     employees = csv.DictReader(csvfile, delimiter=',')
     for row in employees:
         employeeData.append(row)

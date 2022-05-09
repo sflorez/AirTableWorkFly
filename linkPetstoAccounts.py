@@ -11,7 +11,7 @@ accountsTableName = 'All Accounts'
 petsTable = airTableApi.getTable(baseId=baseId, tableName=petsTableName)
 accountsTable = airTableApi.getTable(baseId=baseId, tableName=accountsTableName)
 
-airTableApi.linkTo(petsTable, accountsTable, 100, "customer_id", "customer_id", "Accounts Link")
+airTableApi.linkTo(petsTable, accountsTable, 100, "customer_id", "jet_club_customer_id", "Accounts Link")
 
 
 # for records in petsTable.iterate(page_size=100):

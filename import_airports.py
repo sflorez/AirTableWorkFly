@@ -14,7 +14,7 @@ tableName = 'Airports'
 tableInstance  = airTableApi.getTable(baseId=tableId, tableName=tableName)
 
 airportData = []
-with open('allAirports.csv') as csvfile:
+with open('CSVs/allAirports.csv') as csvfile:
     airports = csv.DictReader(csvfile, delimiter=',')
     for row in airports:
         airportData.append(row)

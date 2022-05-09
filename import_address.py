@@ -15,7 +15,7 @@ addressesTable = airTableApi.getTable(baseId=baseId, tableName=tableName)
 
 addressData = []
 for encoding_type in types_of_encoding:
-    with codecs.open('allAddresses.csv', encoding=encoding_type, errors='replace') as csvfile:
+    with codecs.open('CSVs/allAddresses.csv', encoding=encoding_type, errors='replace') as csvfile:
         addresses = csv.DictReader(csvfile, delimiter=',')
         for row in addresses:
             addressData.append(row)
