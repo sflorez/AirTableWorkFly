@@ -1,0 +1,18 @@
+MEL : non-routine
+Discrepancy : non-routine
+Inspection : Maintenance
+Maintenance : Maintenance
+part : Maintenance
+SB : Maintenance
+ONE TIME ITEM: non-routine
+
+#Work completed (Only for maintenance)
+#ArchiveId is the number at the end
+#if it has an archive id use this formatting otherwise follow the mapping
+https://app2.flightdocs.com/#/maintenance/work-completed/detail/37120/720
+
+#non routine
+https://app2.flightdocs.com/#/maintenance/non-routine/detail/37120/1645
+
+#details for maintenance
+https://app2.flightdocs.com/#/maintenance/item/detail/36922/690
