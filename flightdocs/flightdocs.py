@@ -28,6 +28,18 @@ flight_docs_base = 'appfhUhbEsTFZpDJv'
 work_orders_table_id = 'tblXHmArOS4SDLOYV'
 work_orders_table = airTableApi.getTable(flight_docs_base, work_orders_table_id)
 
+flightdocs_maintenance_mappings = {'MEL' : 'Non-routine',
+                                   'DISCREPANCY' : 'Non-routine',
+                                   'INSPECTION' : 'Maintenance',
+                                   'MAINTENANCE' : 'Maintenance',
+                                   'PART' : 'Maintenance',
+                                   'SB' : 'Maintenance',
+                                   'ONE TIME ITEM': 'non-routine',
+                                   'NEF' : 'Maintenance'}
+
+flightdocs_maintenance_mappings = {'Maintenance' : [],
+                                   'NonRoutine' : ['MEL']}
+
 airtable_sync_headers = {
     'Authorization' : f'Bearer {personal_sync_token}',
     'Content=Type' : 'text/csv; charset=utf-8'
@@ -150,9 +162,12 @@ def format_workorder(wo):
     wo['FlightDocsURL'] = workorder_url
     return wo
 
-def format_line_items(li):
+def format_line_item(li, wo):
     pprint(li)
-    # li['WorkOrderNumber'] = 
+    # discrepancy = {'LookupId' : li['LookupId'],
+    #                'Work Order' : wo['Number'],
+    #                'Flightdocs URL' : }
+    li['WorkOrderNumber'] = wo['Number']
     return li
 
 def add_created_work_orders(aircraft_ids):
@@ -170,6 +185,8 @@ def add_created_work_orders(aircraft_ids):
     current_data.update(formatted_data)
     utils.writeJsonData(current_data, 'work_orders')
 
+
+# will probably need to change this to update records 1 at a time, if a record is deleted we need to be able to remove it from the mapping
 def update_work_orders(aircraft_ids):
     wos = get_flight_docs_work_orders_updated_since(aircraft_ids, os.getenv('LAST_UPDATED'))
     pprint(len(wos))
@@ -181,14 +198,27 @@ def update_work_orders(aircraft_ids):
         work_orders_to_update.append(update_data)
     work_orders_table.batch_update(work_orders_to_update, typecast=True)
 
+def update_discrepancies(aircraft_ids):
+    wos = get_flight_docs_work_orders(aircraft_ids)
+    full_items = []
+    for wo in wos:
+        items_to_append = wo['LineItems']
+        for item in items_to_append:
+            item_to_append = format_line_item(item, wo)
+            # item['WorkOrderNumber'] = wo['Number']
+            full_items.append(item_to_append)
+    # flat_list = [item for sublist in full_items for item in sublist]
+    # filter out the subitems
+    sub_removed = (list(filter(lambda x: x['ChildWoliNumber'] == None, flat_list)))
+
 #get all aircraft from flightdocs
 aircraft = get_flight_docs_aircraft()
 aircraft_ids = list(map(lambda x: x['Id'], aircraft))
 aircraft_regs = list(map(lambda x: x['RegistrationNumber'], aircraft))
 
-add_created_work_orders(aircraft_ids)
-update_work_orders(aircraft_ids)
-dotenv.set_key(dotenv_file, 'LAST_UPDATED', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+# add_created_work_orders(aircraft_ids)
+# update_work_orders(aircraft_ids)
+# dotenv.set_key(dotenv_file, 'LAST_UPDATED', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
 # pprint(aircraft_ids)
 
 # get and publish maintenance discrepencies
