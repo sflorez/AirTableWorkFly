@@ -10,9 +10,13 @@ def writeJsonData(json_object, file_name):
         json.dump(json_object, json_file)
 
 def readJsonData(file_name):
-    with open(f'{file_name}.json', 'r') as json_file:
-        json_object = json.load(json_file)
-        return json_object
+    try:
+        with open(f'{file_name}.json', 'r') as json_file:
+            json_object = json.load(json_file)
+            return json_object
+    except FileNotFoundError:
+        print('no data file found, creating a new one...')
+        return {}
 
 def getCSVData(filepath, withCodec, delimiter):
     data = []

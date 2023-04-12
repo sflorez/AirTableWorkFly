@@ -26,7 +26,9 @@ airtable_discrepancies_sync = 'https://api.airtable.com/v0/appfhUhbEsTFZpDJv/tbl
 personal_sync_token = 'patBEggw1ccVHJNTg.4e86c4f5880a0b75c216fcea39cd423f24d9beac4cec3dfa7a4dc6172e7009e5'
 flight_docs_base = 'appfhUhbEsTFZpDJv'
 work_orders_table_id = 'tblXHmArOS4SDLOYV'
+discrepancies_table_id = 'tblEZgekmqlSfYsG5'
 work_orders_table = airTableApi.getTable(flight_docs_base, work_orders_table_id)
+discrepancies_table = airTableApi.getTable(flight_docs_base, discrepancies_table_id)
 
 flightdocs_maintenance_mappings = {'MEL' : 'Non-routine',
                                    'DISCREPANCY' : 'Non-routine',
@@ -37,8 +39,8 @@ flightdocs_maintenance_mappings = {'MEL' : 'Non-routine',
                                    'ONE TIME ITEM': 'non-routine',
                                    'NEF' : 'Maintenance'}
 
-flightdocs_maintenance_mappings = {'Maintenance' : [],
-                                   'NonRoutine' : ['MEL']}
+flightdocs_maintenance_mappings = {'Maintenance' : ['INSPECTION', 'MAINTENANCE', 'SB', 'PART', 'NEF', 'CDL', 'AD', 'WATCH LIST'],
+                                   'NonRoutine' : ['MEL', 'DISCREPANCY', 'ONE TIME ITEM']}
 
 airtable_sync_headers = {
     'Authorization' : f'Bearer {personal_sync_token}',
@@ -163,12 +165,38 @@ def format_workorder(wo):
     return wo
 
 def format_line_item(li, wo):
-    pprint(li)
-    # discrepancy = {'LookupId' : li['LookupId'],
-    #                'Work Order' : wo['Number'],
-    #                'Flightdocs URL' : }
-    li['WorkOrderNumber'] = wo['Number']
-    return li
+    # pprint(li)
+    equipment_id = li['EquipmentId']
+    item_number = li['ItemNumber']
+    archive_id = li['ArchiveId']
+    flightdocs_url = ''
+    if li['MaintenanceItemType_Name'] in flightdocs_maintenance_mappings['Maintenance']:
+        if archive_id:
+            flightdocs_url = f'https://app2.flightdocs.com/#/maintenance/work-completed/detail/{equipment_id}/{item_number}/{archive_id}'
+        else:
+            flightdocs_url = f'https://app2.flightdocs.com/#/maintenance/item/detail/{equipment_id}/{item_number}'
+    else:
+        flightdocs_url = f'https://app2.flightdocs.com/#/maintenance/non-routine/detail/{equipment_id}/{item_number}'
+    discrepancy = {'LookupId' : li['LookupId'],
+                   'Work Order' : wo['Number'],
+                   'Flightdocs URL' : flightdocs_url,
+                   'ATACode': li['ATACode'],
+                   'ATADisplay' : li['ATADisplay'],
+                   'Discrepancy' : li['Description'],
+                   'MaintenanceItem_NextDueDate' : li['MaintenanceItem_NextDueDate'],
+                   'MaintenanceItem_NextDueHours' : li['MaintenanceItem_NextDueHours'],
+                   'MaintenanceItem_NextDueLandings' : li['MaintenanceItem_NextDueLandings'],
+                   'MaintenanceItemType_Name' : li['MaintenanceItemType_Name'],
+                   'ManufacturingMaintenanceCode' : li['ManufacturingMaintenanceCode'],
+                   'Notes' : li['Notes'],
+                   'Status_Name' : li['Status_Name'],
+                   'Work Order' : wo['Number'],
+                   'WorkCompletedEntry_IsInspectorEsigned' : li['WorkCompletedEntry_IsInspectorEsigned'],
+                   'WorkCompletedEntry_IsTechnicianEsigned' : li['WorkCompletedEntry_IsTechnicianEsigned'],
+                   'WorkCompletedEntry_LogHours' : li['WorkCompletedEntry_LogHours'],
+                   'WorkCompletedEntry_LogLandings' : li['WorkCompletedEntry_LogLandings'],
+                   'WorkEnd' : li['WorkEnd']}
+    return discrepancy
 
 def add_created_work_orders(aircraft_ids):
     wos = get_flight_docs_work_orders_created_since(aircraft_ids, os.getenv('LAST_UPDATED'))
@@ -199,22 +227,31 @@ def update_work_orders(aircraft_ids):
     work_orders_table.batch_update(work_orders_to_update, typecast=True)
 
 def update_discrepancies(aircraft_ids):
+    current_data = utils.readJsonData('discrepancies')
+    pprint(current_data)
     wos = get_flight_docs_work_orders(aircraft_ids)
     full_items = []
     for wo in wos:
         items_to_append = wo['LineItems']
         for item in items_to_append:
-            item_to_append = format_line_item(item, wo)
-            # item['WorkOrderNumber'] = wo['Number']
-            full_items.append(item_to_append)
+            if item['ChildWoliNumber'] == None:
+                item_to_append = format_line_item(item, wo)
+                full_items.append(item_to_append)
     # flat_list = [item for sublist in full_items for item in sublist]
     # filter out the subitems
-    sub_removed = (list(filter(lambda x: x['ChildWoliNumber'] == None, flat_list)))
+    # sub_removed = (list(filter(lambda x: x['ChildWoliNumber'] == None, flat_list)))
+    pprint(len(full_items))
+    created_discrepancies = discrepancies_table.batch_create(full_items, typecast=True)
+    formatted_data = {el['fields']['LookupId'] : el['id'] for el in created_discrepancies}
+    utils.writeJsonData(formatted_data, 'discrepancies')
 
 #get all aircraft from flightdocs
 aircraft = get_flight_docs_aircraft()
 aircraft_ids = list(map(lambda x: x['Id'], aircraft))
 aircraft_regs = list(map(lambda x: x['RegistrationNumber'], aircraft))
+
+update_discrepancies(aircraft_ids)
+dotenv.set_key(dotenv_file, 'LAST_UPDATED_DISCREPANCIES', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
 
 # add_created_work_orders(aircraft_ids)
 # update_work_orders(aircraft_ids)
