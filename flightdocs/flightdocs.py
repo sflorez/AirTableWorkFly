@@ -25,10 +25,13 @@ airtable_aog_sync = 'https://api.airtable.com/v0/appfhUhbEsTFZpDJv/tbl3wMK61XS61
 airtable_discrepancies_sync = 'https://api.airtable.com/v0/appfhUhbEsTFZpDJv/tblEtpTnIVxV9gdbA/sync/oFypwW1s'
 personal_sync_token = 'patBEggw1ccVHJNTg.4e86c4f5880a0b75c216fcea39cd423f24d9beac4cec3dfa7a4dc6172e7009e5'
 flight_docs_base = 'appfhUhbEsTFZpDJv'
+static_base = 'appamPDLTB6vyeNDB'
+aircraft_table_id = 'tblMzfDIbbpIu9PR8'
 work_orders_table_id = 'tblXHmArOS4SDLOYV'
 discrepancies_table_id = 'tblEZgekmqlSfYsG5'
 work_orders_table = airTableApi.getTable(flight_docs_base, work_orders_table_id)
 discrepancies_table = airTableApi.getTable(flight_docs_base, discrepancies_table_id)
+aircraft_table = airTableApi.getTable(static_base, aircraft_table_id)
 
 flightdocs_maintenance_mappings = {'MEL' : 'Non-routine',
                                    'DISCREPANCY' : 'Non-routine',
@@ -52,6 +55,22 @@ headers={
     'Accept': 'application/json',
     'api-version' : '2.0',
     'Authorization': f'Bearer {flightdocs_token}'}
+
+#airtable functions
+def get_airtable_aircraft():
+    res = aircraft_table.all(fields=['Aircraft Tail Number'])
+    formatted_data = [el['fields']['Aircraft Tail Number'] for el in res]
+    return formatted_data
+
+def generate_wo_reference():
+    airtable_work_orders = work_orders_table.all(fields=['LookupId'], formula="NOT({LookupId} = BLANK())")
+    formatted_data = {el['fields']['LookupId'] : el['id'] for el in airtable_work_orders}
+    return formatted_data
+
+def generate_discrepancy_reference():
+    airtable_discrepancies = discrepancies_table.all(fields=['LookupId'], formula="NOT({LookupId}= BLANK())")
+    formatted_data = {el['fields']['LookupId'] : el['id'] for el in airtable_discrepancies}
+    return formatted_data
 
 #network functions
 def flightdocs_get(query,params=None):
@@ -120,49 +139,28 @@ def save_temp_data(data, file_name):
         writer.writeheader()
         writer.writerows(data)
 
-def format_workorder(wo):
-    keys_to_remove = ['ContactEmail', 
-                      'CompletedHoursPercent', 
-                      'CompletedHours', 
-                      'ClosedLineItemPercent', 
-                      'ActualTotalCost', 
-                      'ActualLaborCostSubTotal', 
-                      'ActualInventoryCostSubTotal', 
-                      'AircraftId', 
-                      'TimeZone', 
-                      'WorkOrderStatusId', 
-                      'CreatedBy', 
-                      'LastUpdatedBy', 
-                      'AirportId', 
-                      'LineItems', 
-                      'AccountCode', 
-                      'ActualAdditionalCostSubTotal',
-                      'ContactName',
-                      'ContactPhone',
-                      'EndDate',
-                      'EstimatedAdditionalCostSubTotal',
-                      'EstimatedLaborCostSubTotal',
-                      'EstimatedTotalCost',
-                      'InReviewLineItemCount',
-                      'IsActive',
-                      'RemainingHours',
-                      'RequireSignatureLineItemCount',
-                      'StartDate',
-                      'TermsAndConditions',
-                      'EstimatedInventoryCostSubTotal',
-                      'EstimatedHours'
-                      ]
-    bad_tail_numbers = ['141187', 'CAE330344', 'CAE330537', 'Eng DE0093' , 'Eng DE0094' , 'Eng DE0100', 'Eng PCE-DE00', 'PCE-DB0333', 'PCE-DE0048', 'PCE-DE0074']
-    workorder_url = f'https://app2.flightdocs.com/#/work-orders/work-order/detail/{wo["Id"]}'
-    for key in keys_to_remove:
-        wo.pop(key)
-    
-    for tail in bad_tail_numbers:
-        if(wo.get('Aircraft_RegistrationNumber', None) == tail):
-            wo.pop('Aircraft_RegistrationNumber')
-    
-    wo['FlightDocsURL'] = workorder_url
-    return wo
+def format_workorder(wo, airtable_aircrafts):
+    work_order = {
+        'Aircraft' : wo.get('Aircraft_RegistrationNumber'),
+        'ClosedLineItemCount' : wo.get('ClosedLineItemCount'),
+        'Flightdocs Created Date' : wo.get('Created'),
+        'EndTime' : wo.get('EndTime'),
+        'FlightDocsURL' : f'https://app2.flightdocs.com/#/work-orders/work-order/detail/{wo["Id"]}',
+        'Id' : wo.get('Id'),
+        'Flightdocs LastUpdated' : wo.get('LastUpdated'),
+        'LineItemCount' : wo.get('LineItemCount'),
+        'LookupId' : wo.get('LookupId'),
+        'Notes' : wo.get('Notes'),
+        'Control Number' : wo.get('Number'),
+        'OpenLineItemCount' : wo.get('OpenLineItemCount'),
+        'ReferenceField' : wo.get('ReferenceField'),
+        'StartTime' : wo.get('StartTime'),
+        'Status_Name' : wo.get('Status_Name')
+        }
+    #if the work order is tied to an equipment we cant link remove the key value pair to prevent batch creation failure
+    if not(wo.get('Aircraft_RegistrationNumber', None) in airtable_aircrafts):
+        work_order.pop('Aircraft')
+    return work_order
 
 def format_line_item(li, wo):
     # pprint(li)
@@ -195,66 +193,78 @@ def format_line_item(li, wo):
                    'WorkCompletedEntry_IsTechnicianEsigned' : li['WorkCompletedEntry_IsTechnicianEsigned'],
                    'WorkCompletedEntry_LogHours' : li['WorkCompletedEntry_LogHours'],
                    'WorkCompletedEntry_LogLandings' : li['WorkCompletedEntry_LogLandings'],
-                   'WorkEnd' : li['WorkEnd']}
+                   'WorkEnd' : li['WorkEnd'],
+                   'Flightdocs LastUpdated' : li['LastUpdated']}
     return discrepancy
 
-def add_created_work_orders(aircraft_ids):
+def add_created_work_orders(aircraft_ids, airtable_aircrafts):
     wos = get_flight_docs_work_orders_created_since(aircraft_ids, os.getenv('LAST_UPDATED'))
-    pprint(wos)
-    current_data = utils.readJsonData('work_orders')
+    #pprint(wos)
+    current_data = generate_wo_reference()
     work_orders_to_create= []
     for wo in wos:
-        wo_formatted = format_workorder(wo)
+        wo_formatted = format_workorder(wo, airtable_aircrafts)
         if not wo['LookupId'] in current_data:
             work_orders_to_create.append(wo_formatted)
     created_work_orders = work_orders_table.batch_create(work_orders_to_create, typecast=True)
-    pprint(created_work_orders)
-    formatted_data = {el['fields']['LookupId'] : el['id'] for el in created_work_orders}
-    current_data.update(formatted_data)
-    utils.writeJsonData(current_data, 'work_orders')
 
 
 # will probably need to change this to update records 1 at a time, if a record is deleted we need to be able to remove it from the mapping
 def update_work_orders(aircraft_ids):
     wos = get_flight_docs_work_orders_updated_since(aircraft_ids, os.getenv('LAST_UPDATED'))
-    pprint(len(wos))
+    #pprint(len(wos))
     work_orders_to_update=[]
-    current_data = utils.readJsonData('work_orders')
+    current_data = generate_wo_reference()
     for wo in wos:
         wo_formatted = format_workorder(wo)
-        update_data = {"id" : current_data[wo['LookupId']], "fields" : wo_formatted}
-        work_orders_to_update.append(update_data)
+        if wo['LookupId'] in current_data:
+            update_data = {"id" : current_data[wo['LookupId']], "fields" : wo_formatted}
+            work_orders_to_update.append(update_data)
     work_orders_table.batch_update(work_orders_to_update, typecast=True)
 
 def update_discrepancies(aircraft_ids):
-    current_data = utils.readJsonData('discrepancies')
-    pprint(current_data)
+    # current_data = utils.readJsonData('discrepancies')
+    current_data = generate_discrepancy_reference()
+    #pprint(current_data)
     wos = get_flight_docs_work_orders(aircraft_ids)
     full_items = []
+    items_to_create = []
+    items_to_update = []
     for wo in wos:
         items_to_append = wo['LineItems']
         for item in items_to_append:
             if item['ChildWoliNumber'] == None:
                 item_to_append = format_line_item(item, wo)
                 full_items.append(item_to_append)
-    # flat_list = [item for sublist in full_items for item in sublist]
-    # filter out the subitems
-    # sub_removed = (list(filter(lambda x: x['ChildWoliNumber'] == None, flat_list)))
-    pprint(len(full_items))
-    created_discrepancies = discrepancies_table.batch_create(full_items, typecast=True)
-    formatted_data = {el['fields']['LookupId'] : el['id'] for el in created_discrepancies}
-    utils.writeJsonData(formatted_data, 'discrepancies')
+                #pprint(item_to_append)
+                #if the id of this item doesnt exist we need to create it
+                if not item_to_append['LookupId'] in current_data:
+                    items_to_create.append(item_to_append)
+                #if the id does exist then we need to update it only if it has changed recently
+                elif item_to_append.get('Flightdocs LastUpdated', None):
+                    if item_to_append.get('Flightdocs LastUpdated') >= os.getenv('LAST_UPDATED'):
+                        update_data = {"id" : current_data[item_to_append['LookupId']], "fields" : item_to_append}
+                        items_to_update.append(update_data)
+    pprint(len(items_to_create))
+    pprint(len(items_to_update))
+    created_discrepancies = discrepancies_table.batch_create(items_to_create, typecast=True)
+    updated_discrepancies = discrepancies_table.batch_update(items_to_update, typecast=True)
+    
 
 #get all aircraft from flightdocs
 aircraft = get_flight_docs_aircraft()
 aircraft_ids = list(map(lambda x: x['Id'], aircraft))
 aircraft_regs = list(map(lambda x: x['RegistrationNumber'], aircraft))
+airtable_aircrafts = get_airtable_aircraft()
+# pprint(airtable_aircrafts)
 
 update_discrepancies(aircraft_ids)
-dotenv.set_key(dotenv_file, 'LAST_UPDATED_DISCREPANCIES', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+#dotenv.set_key(dotenv_file, 'LAST_UPDATED_DISCREPANCIES', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
 
-# add_created_work_orders(aircraft_ids)
-# update_work_orders(aircraft_ids)
+# pprint(generate_wo_reference())
+# pprint(len(generate_discrepancy_reference()))
+# add_created_work_orders(aircraft_ids, airtable_aircrafts)
+# # # update_work_orders(aircraft_ids)
 # dotenv.set_key(dotenv_file, 'LAST_UPDATED', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
 # pprint(aircraft_ids)
 
@@ -287,8 +297,7 @@ dotenv.set_key(dotenv_file, 'LAST_UPDATED_DISCREPANCIES', datetime.now().strftim
 #     work_orders_to_create.append(wo_formatted)
 # created_work_orders = work_orders_table.batch_create(work_orders_to_create, typecast=True)
 # pprint(created_work_orders)
-# # airtable_work_orders = work_orders_table.all(fields=['LookupId'])
-# formatted_data = {el['fields']['LookupId'] : el['id'] for el in created_work_orders}
+
 # # pprint(formatted_data)
 # current_data = utils.readJsonData('work_orders')
 # current_data.update(formatted_data)
